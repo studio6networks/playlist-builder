@@ -81,6 +81,7 @@
   .track .artist { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .track .query { font-size: 11px; color: #666; font-family: ui-monospace, monospace; }
   .track .status { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+  .track select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-size: 12px; max-width: 320px; }
   .status.ok { background: #0f3d22; color: #4ade80; }
   .status.miss { background: #3d0f0f; color: #f87171; }
   details { margin-top: 12px; }
@@ -98,7 +99,7 @@
 
   <div class="panel" id="setupPanel">
     <label>Spotify Client ID</label>
-    <input type="text" id="clientId" placeholder="Paste your Spotify app's Client ID">
+    <input type="text" id="clientId" value="ca490bdd668d40b6819e5cf7098775f8" placeholder="Paste your Spotify app's Client ID">
     <details>
       <summary>How do I get one? (one-time, ~2 min)</summary>
       <div style="color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.6;">
@@ -339,6 +340,13 @@ async function init() {
   const cid = localStorage.getItem('spotify_client_id');
   if (cid) document.getElementById('clientId').value = cid;
 
+  const draftSongs = localStorage.getItem('songs_draft');
+  if (draftSongs) document.getElementById('songsText').value = draftSongs;
+  const draftName = localStorage.getItem('playlist_name_draft');
+  if (draftName) document.getElementById('playlistName').value = draftName;
+  document.getElementById('songsText').addEventListener('input', e => localStorage.setItem('songs_draft', e.target.value));
+  document.getElementById('playlistName').addEventListener('input', e => localStorage.setItem('playlist_name_draft', e.target.value));
+
   if (window.location.search.includes('code=')) {
     await handleCallback();
   }
@@ -365,12 +373,13 @@ async function searchAll() {
   matches = [];
   for (const s of songs) {
     try {
-      const res = await api('/search?q=' + encodeURIComponent(s.query) + '&type=track&limit=1');
-      const t = res.tracks.items[0] || null;
-      matches.push({ ...s, track: t, selected: !!t });
-      log(`"${s.raw}" → ${t ? `${t.artists[0].name} - ${t.name}` : 'NO MATCH'}`);
+      const res = await api('/search?q=' + encodeURIComponent(s.query) + '&type=track&limit=5');
+      const candidates = res.tracks.items || [];
+      const t = candidates[0] || null;
+      matches.push({ ...s, track: t, candidates, selected: !!t });
+      log(`"${s.raw}" → ${t ? `${t.artists[0].name} - ${t.name}` : 'NO MATCH'} (${candidates.length} candidates)`);
     } catch (e) {
-      matches.push({ ...s, track: null, selected: false });
+      matches.push({ ...s, track: null, candidates: [], selected: false });
       log(`"${s.raw}" → ERROR: ${e.message}`);
     }
   }
@@ -391,6 +400,9 @@ function renderResults() {
   matches.forEach((m, i) => {
     const div = document.createElement('div');
     div.className = 'track' + (m.track ? '' : ' bad');
+    const altOptions = (m.candidates || []).map((c, idx) =>
+      `<option value="${idx}" ${c === m.track ? 'selected' : ''}>${escapeHtml(c.artists.map(a => a.name).join(', '))} — ${escapeHtml(c.name)}</option>`
+    ).join('');
     div.innerHTML = `
       <input type="checkbox" ${m.selected ? 'checked' : ''} ${m.track ? '' : 'disabled'} data-i="${i}">
       <img src="${m.track?.album?.images?.[2]?.url || ''}" onerror="this.style.visibility='hidden'">
@@ -398,6 +410,7 @@ function renderResults() {
         <div class="title">${m.track ? escapeHtml(m.track.name) : '— no match —'}</div>
         <div class="artist">${m.track ? escapeHtml(m.track.artists.map(a => a.name).join(', ')) : ''}</div>
         <div class="query">from: ${escapeHtml(m.raw)}</div>
+        ${m.candidates && m.candidates.length > 1 ? `<select data-i="${i}" class="alt-pick" style="margin-top:4px;">${altOptions}</select>` : ''}
       </div>
       <span class="status ${m.track ? 'ok' : 'miss'}">${m.track ? 'found' : 'miss'}</span>
     `;
@@ -406,6 +419,14 @@ function renderResults() {
   container.querySelectorAll('input[type=checkbox]').forEach(cb => {
     cb.addEventListener('change', e => {
       matches[+e.target.dataset.i].selected = e.target.checked;
+    });
+  });
+  container.querySelectorAll('select.alt-pick').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const i = +e.target.dataset.i;
+      const idx = +e.target.value;
+      matches[i].track = matches[i].candidates[idx];
+      renderResults();
     });
   });
 }
