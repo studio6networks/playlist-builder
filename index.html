@@ -236,7 +236,7 @@ async function handleCallback() {
   const data = await res.json();
   if (data.access_token) {
     localStorage.setItem('spotify_token', data.access_token);
-    localStorage.setItem('spotify_token_expires', Date.now() + data.expires_in * 1000);
+    localStorage.setItem('spotify_token_expires', Date.now() + (data.expires_in - 60) * 1000);
     if (data.refresh_token) localStorage.setItem('spotify_refresh', data.refresh_token);
     window.history.replaceState({}, '', REDIRECT_URI);
     return true;
@@ -252,14 +252,51 @@ function getToken() {
   return tok;
 }
 
+async function refreshAccessToken() {
+  const clientId = localStorage.getItem('spotify_client_id');
+  const refresh = localStorage.getItem('spotify_refresh');
+  if (!clientId || !refresh) return false;
+
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: refresh,
+    client_id: clientId,
+  });
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem('spotify_token', data.access_token);
+      localStorage.setItem('spotify_token_expires', Date.now() + (data.expires_in - 60) * 1000);
+      if (data.refresh_token) localStorage.setItem('spotify_refresh', data.refresh_token);
+      log('Token refreshed.');
+      return true;
+    }
+    log('Refresh failed:', data);
+    return false;
+  } catch (e) {
+    log('Refresh error:', e.message);
+    return false;
+  }
+}
+
 function logout() {
   ['spotify_token','spotify_token_expires','spotify_refresh','spotify_verifier'].forEach(k => localStorage.removeItem(k));
   location.reload();
 }
 
 // =================== SPOTIFY API ===================
-async function api(path, opts = {}) {
-  const token = getToken();
+async function api(path, opts = {}, retried = false) {
+  let token = getToken();
+  if (!token) {
+    const ok = await refreshAccessToken();
+    if (!ok) throw new Error('Not authenticated');
+    token = getToken();
+  }
   const res = await fetch('https://api.spotify.com/v1' + path, {
     ...opts,
     headers: {
@@ -268,6 +305,10 @@ async function api(path, opts = {}) {
       'Content-Type': 'application/json',
     },
   });
+  if (res.status === 401 && !retried) {
+    const ok = await refreshAccessToken();
+    if (ok) return api(path, opts, true);
+  }
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`Spotify ${res.status}: ${txt}`);
@@ -349,6 +390,9 @@ async function init() {
 
   if (window.location.search.includes('code=')) {
     await handleCallback();
+  }
+  if (!getToken() && localStorage.getItem('spotify_refresh')) {
+    await refreshAccessToken();
   }
   if (getToken()) {
     try {
