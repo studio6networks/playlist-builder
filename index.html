@@ -97,6 +97,12 @@
   }
   .seg button.active { background: var(--green); color: #000; }
   .seg button:hover:not(.active) { color: var(--text); transform: none; }
+  .track .drag-handle {
+    cursor: grab; color: #555; padding: 0 6px; font-size: 16px; user-select: none;
+  }
+  .track .drag-handle:hover { color: var(--text); }
+  .track.dragging { opacity: 0.4; }
+  .track.drag-over { border-top: 2px solid var(--green); }
   .status.ok { background: #0f3d22; color: #4ade80; }
   .status.miss { background: #3d0f0f; color: #f87171; }
   details { margin-top: 12px; }
@@ -186,8 +192,11 @@
     <div class="row" style="margin-top: 16px;">
       <button id="createBtn">Create playlist</button>
       <button class="secondary" id="retryBtn">Retry misses</button>
+      <button class="secondary" id="removeMissesBtn">Remove unmatched</button>
+      <button class="secondary" id="exportCsvBtn">Export CSV</button>
       <button class="secondary" id="backBtn">Back</button>
     </div>
+    <div class="sub" style="margin-top: 6px;">Tip: drag rows by the ⋮⋮ handle to reorder.</div>
   </div>
 
   <div class="panel hidden" id="donePanel">
@@ -502,6 +511,8 @@ function renderResults() {
 
   const missCount = matches.length - found;
   document.getElementById('retryBtn').style.display = missCount ? '' : 'none';
+  document.getElementById('removeMissesBtn').style.display = missCount ? '' : 'none';
+  document.getElementById('exportCsvBtn').style.display = found ? '' : 'none';
 
   const container = document.getElementById('results');
   container.innerHTML = '';
@@ -513,7 +524,10 @@ function renderResults() {
       `<option value="${idx}" ${c === m.track ? 'selected' : ''}>${escapeHtml(c.artists.map(a => a.name).join(', '))} — ${escapeHtml(c.name)}</option>`
     ).join('');
     const preview = m.track?.preview_url;
+    div.draggable = true;
+    div.dataset.idx = i;
     div.innerHTML = `
+      <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
       <input type="checkbox" ${m.selected ? 'checked' : ''} ${m.track ? '' : 'disabled'} data-i="${i}">
       <img src="${m.track?.album?.images?.[2]?.url || ''}" onerror="this.style.visibility='hidden'">
       <div class="meta">
@@ -526,6 +540,35 @@ function renderResults() {
       <span class="status ${m.track ? 'ok' : 'miss'}">${m.track ? 'found' : 'miss'}</span>
     `;
     container.appendChild(div);
+  });
+
+  // Drag-and-drop reordering
+  let dragSrc = null;
+  container.querySelectorAll('.track').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragSrc = +row.dataset.idx;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      container.querySelectorAll('.track').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      container.querySelectorAll('.track').forEach(r => r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      const dst = +row.dataset.idx;
+      if (dragSrc === null || dragSrc === dst) return;
+      const [moved] = matches.splice(dragSrc, 1);
+      matches.splice(dst, 0, moved);
+      dragSrc = null;
+      renderResults();
+    });
   });
   container.querySelectorAll('input[type=checkbox]').forEach(cb => {
     cb.addEventListener('change', e => {
@@ -667,6 +710,47 @@ async function importFromPlaylist() {
   }
 }
 
+// =================== CSV EXPORT ===================
+function csvEscape(s) {
+  if (s == null) return '';
+  const str = String(s);
+  return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function exportCsv() {
+  const rows = [['Input', 'Matched Artist', 'Matched Title', 'Album', 'Spotify URL', 'Selected']];
+  matches.forEach(m => {
+    if (!m.track) { rows.push([m.raw, '', '', '', '', '']); return; }
+    rows.push([
+      m.raw,
+      m.track.artists.map(a => a.name).join(', '),
+      m.track.name,
+      m.track.album?.name || '',
+      m.track.external_urls?.spotify || '',
+      m.selected ? 'yes' : 'no',
+    ]);
+  });
+  const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  a.href = url;
+  a.download = `playlist-matches-${stamp}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  log(`Exported ${matches.length} rows to CSV`);
+}
+
+// =================== REMOVE UNMATCHED ===================
+function removeUnmatched() {
+  const before = matches.length;
+  matches = matches.filter(m => m.track);
+  const removed = before - matches.length;
+  log(`Removed ${removed} unmatched row${removed === 1 ? '' : 's'}`);
+  renderResults();
+}
+
 // =================== RETRY MISSES ===================
 async function retryMisses() {
   const misses = matches.filter(m => !m.track);
@@ -707,6 +791,8 @@ document.getElementById('logoutBtn').addEventListener('click', logout);
 document.getElementById('searchBtn').addEventListener('click', searchAll);
 document.getElementById('createBtn').addEventListener('click', createPlaylist);
 document.getElementById('retryBtn').addEventListener('click', retryMisses);
+document.getElementById('removeMissesBtn').addEventListener('click', removeUnmatched);
+document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
 document.getElementById('importBtn').addEventListener('click', importFromPlaylist);
 document.getElementById('backBtn').addEventListener('click', () => {
   if (currentAudio) currentAudio.pause();
