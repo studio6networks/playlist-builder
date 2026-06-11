@@ -90,7 +90,7 @@
     background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
     border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 14px;
   }
-  .seg { display: inline-flex; gap: 0; padding: 2px; }
+  .seg { display: inline-flex; gap: 6px; padding: 4px; }
   .seg button {
     background: transparent; color: var(--muted); border: 0; padding: 6px 14px;
     border-radius: 4px; font-weight: 600; font-size: 13px; cursor: pointer;
@@ -166,6 +166,7 @@
     <div class="row" style="margin-top: 12px;">
       <label style="margin: 0;">…or upload CSV:</label>
       <input type="file" id="csvFile" accept=".csv,.txt">
+      <button class="secondary" id="clearListBtn" style="padding: 6px 14px; font-size: 13px; margin-left: auto;">Clear list</button>
     </div>
     <div class="sub" style="margin-top: 6px;">CSV: one song per row. If it has columns like <code>title,artist</code> or <code>artist,title</code> they'll be detected. Otherwise the first column is used.</div>
 
@@ -794,6 +795,15 @@ document.getElementById('retryBtn').addEventListener('click', retryMisses);
 document.getElementById('removeMissesBtn').addEventListener('click', removeUnmatched);
 document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
 document.getElementById('importBtn').addEventListener('click', importFromPlaylist);
+document.getElementById('clearListBtn').addEventListener('click', () => {
+  const ta = document.getElementById('songsText');
+  if (!ta.value.trim() || confirm('Clear the song list?')) {
+    ta.value = '';
+    localStorage.removeItem('songs_draft');
+    document.getElementById('csvFile').value = '';
+    log('Song list cleared');
+  }
+});
 document.getElementById('backBtn').addEventListener('click', () => {
   if (currentAudio) currentAudio.pause();
   document.getElementById('resultsPanel').classList.add('hidden');
