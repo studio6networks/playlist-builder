@@ -203,23 +203,21 @@
   <div class="sub">Paste a song list or upload a CSV → search Spotify → create a playlist.</div>
 
   <div class="panel" id="setupPanel">
-    <label>Spotify Client ID</label>
-    <input type="text" id="clientId" value="ca490bdd668d40b6819e5cf7098775f8" placeholder="Paste your Spotify app's Client ID">
-    <details>
-      <summary>How do I get one? (one-time, ~2 min)</summary>
-      <div style="color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.6;">
-        1. Go to <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a> and log in.<br>
-        2. Click "Create app". Name it whatever (e.g., "My Playlist Builder").<br>
-        3. For "Redirect URI", paste exactly: <code id="redirectUri" style="background:#000;padding:2px 6px;border-radius:3px;"></code>
-        <button class="secondary" style="padding:2px 8px;font-size:11px;margin-left:6px;" onclick="navigator.clipboard.writeText(document.getElementById('redirectUri').textContent)">copy</button><br>
-        4. Check the "Web API" box, accept terms, save.<br>
-        5. Copy the Client ID and paste it above.<br>
-        <em>Note: in dev mode, Spotify apps only work for accounts you add under "User Management" in your app settings. Add your own Spotify email there.</em>
-      </div>
-    </details>
-    <div style="margin-top: 12px;">
+    <p style="margin: 0 0 16px; line-height: 1.5;">Sign in with Spotify to start building playlists from song lists, CSVs, or existing playlist links.</p>
+    <div>
       <button id="loginBtn">Connect Spotify</button>
     </div>
+    <details style="margin-top: 16px;">
+      <summary>Advanced: use your own Spotify app</summary>
+      <div style="color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.6;">
+        By default this app uses the studio6networks Spotify integration. If you want to use your own (e.g. you're self-hosting):<br>
+        1. Go to <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a>, create an app.<br>
+        2. Set Redirect URI to <code id="redirectUri" style="background:var(--panel-2);padding:2px 6px;border-radius:3px;"></code>
+        <button class="secondary" style="padding:2px 8px;font-size:11px;margin-left:6px;" onclick="navigator.clipboard.writeText(document.getElementById('redirectUri').textContent)">copy</button><br>
+        3. Paste your Client ID here, then connect:<br>
+        <input type="text" id="clientId" value="ca490bdd668d40b6819e5cf7098775f8" placeholder="Spotify app Client ID" style="margin-top: 8px;">
+      </div>
+    </details>
   </div>
 
   <div class="panel hidden" id="mainPanel">
@@ -244,7 +242,7 @@
       <select id="existingPlaylist" style="width: 100%;"><option value="">Loading…</option></select>
     </div>
 
-    <label style="margin-top: 12px;">Songs (one per line — formats: "Artist - Title", "Title - Artist", or just "Title")</label>
+    <label style="margin-top: 12px;">Songs (one per line — formats: "Artist - Title", "Title - Artist", or just "Title") <span style="color:var(--muted);font-weight:normal;">· Ctrl/⌘+Enter to search</span></label>
     <textarea id="songsText" placeholder="Radiohead - Karma Police&#10;The Strokes - Last Nite&#10;Björk - Hyperballad"></textarea>
 
     <div class="row" style="margin-top: 12px;">
@@ -1137,6 +1135,12 @@ document.getElementById('openBtn').addEventListener('click', openPlaylistDirect)
 document.getElementById('addTrackBtn').addEventListener('click', addTrackInline);
 document.getElementById('addTrackInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); addTrackInline(); }
+});
+document.getElementById('songsText').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    searchAll();
+  }
 });
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 document.getElementById('shareDraftBtn').addEventListener('click', shareDraft);
