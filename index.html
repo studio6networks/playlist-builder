@@ -2,232 +2,491 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Spotify Playlist Builder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playlist Studio — turn lists into Spotify playlists</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,30..100;1,9..144,300..700,30..100&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
+  /* ============================================
+     PLAYLIST STUDIO — Editorial design system
+     - Display: Fraunces (variable serif)
+     - Body: Inter
+     - Mono: JetBrains Mono
+     - Two-tone palette: warm honey accent + Spotify green for brand handoff
+     ============================================ */
   :root, :root[data-theme="dark"] {
-    --bg: #121212;
-    --panel: #181818;
-    --panel-2: #1f1f1f;
-    --text: #ffffff;
-    --muted: #a7a7a7;
+    --bg: #0e0c08;
+    --bg-grain: rgba(212, 168, 106, 0.05);
+    --panel: #16130d;
+    --panel-2: #1c1812;
+    --text: #f3ead9;
+    --text-strong: #ffffff;
+    --muted: #9a8e7a;
+    --accent: #d4a86a;
+    --accent-hover: #e6bc7d;
+    --accent-soft: rgba(212, 168, 106, 0.12);
+    --accent-ink: #1c1812;
     --green: #1db954;
     --green-hover: #1ed760;
-    --red: #e22134;
-    --border: #2a2a2a;
-    --query-color: #666;
-    --img-bg: #333;
-    --secondary-border: #555;
-    --bad-border: #5a2a2a;
-    --bad-bg: #2a1515;
+    --red: #d76060;
+    --border: #2a241c;
+    --border-strong: #3a3225;
+    --query-color: #6e6354;
+    --img-bg: #2a241c;
+    --bad-border: #5a3424;
+    --bad-bg: #2a1a14;
     --dup-border: #5a4a1a;
     --dup-bg: #2a2415;
-    --log-bg: #000;
-    --log-color: #aaa;
-    --status-ok-bg: #0f3d22;
-    --status-ok-color: #4ade80;
-    --status-miss-bg: #3d0f0f;
-    --status-miss-color: #f87171;
+    --log-bg: #07060380;
+    --log-color: #8a7e6a;
+    --status-ok-bg: rgba(29, 185, 84, 0.15);
+    --status-ok-color: #6ed999;
+    --status-miss-bg: rgba(215, 96, 96, 0.15);
+    --status-miss-color: #e98484;
+    --shadow-soft: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.4);
   }
   :root[data-theme="light"] {
-    --bg: #fafafa;
-    --panel: #ffffff;
-    --panel-2: #f4f4f4;
-    --text: #1a1a1a;
-    --muted: #5e5e5e;
-    --green: #1db954;
-    --green-hover: #169a45;
-    --red: #c02030;
-    --border: #e2e2e2;
-    --query-color: #888;
-    --img-bg: #e0e0e0;
-    --secondary-border: #c8c8c8;
-    --bad-border: #f0b8b8;
-    --bad-bg: #fff0f0;
+    --bg: #f4ede0;
+    --bg-grain: rgba(168, 118, 63, 0.06);
+    --panel: #faf6ec;
+    --panel-2: #ebe2cf;
+    --text: #1a1612;
+    --text-strong: #000000;
+    --muted: #6f6453;
+    --accent: #a8763f;
+    --accent-hover: #8a5d2e;
+    --accent-soft: rgba(168, 118, 63, 0.1);
+    --accent-ink: #ffffff;
+    --green: #1aa84b;
+    --green-hover: #16903f;
+    --red: #b03a3a;
+    --border: #ddd1b8;
+    --border-strong: #c5b89c;
+    --query-color: #8a7d6a;
+    --img-bg: #e6dcc6;
+    --bad-border: #e8b8a8;
+    --bad-bg: #fbeae0;
     --dup-border: #e8d68a;
     --dup-bg: #fdf6dc;
-    --log-bg: #f0f0f0;
-    --log-color: #555;
-    --status-ok-bg: #d3f4e0;
-    --status-ok-color: #0e7a3b;
-    --status-miss-bg: #fbdcdc;
-    --status-miss-color: #b3252e;
+    --log-bg: rgba(0,0,0,0.05);
+    --log-color: #6e6353;
+    --status-ok-bg: rgba(26, 168, 75, 0.15);
+    --status-ok-color: #157a36;
+    --status-miss-bg: rgba(176, 58, 58, 0.12);
+    --status-miss-color: #963131;
+    --shadow-soft: 0 1px 0 rgba(255,255,255,0.6) inset, 0 4px 18px -10px rgba(75, 50, 20, 0.18);
   }
+
   * { box-sizing: border-box; }
+
+  html, body { background: var(--bg); }
+
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
     color: var(--text);
     min-height: 100vh;
-    padding: 24px;
-    transition: background .2s, color .2s;
+    padding: clamp(20px, 4vw, 56px) clamp(20px, 4vw, 40px) 80px;
+    transition: background .25s ease, color .25s ease;
+    background-image:
+      radial-gradient(ellipse 60% 50% at 85% -10%, var(--accent-soft), transparent 70%),
+      radial-gradient(ellipse 50% 40% at 0% 100%, var(--accent-soft), transparent 60%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  .container { max-width: 880px; margin: 0 auto; }
-  h1 { margin: 0 0 4px; font-size: 28px; }
-  .sub { color: var(--muted); margin-bottom: 24px; font-size: 14px; }
+
+  .container { max-width: 920px; margin: 0 auto; }
+
+  /* ---------- Typography ---------- */
+  .masthead { margin: 8px 0 56px; position: relative; }
+  .kicker {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .kicker::after {
+    content: '';
+    flex: 1; max-width: 80px;
+    height: 1px; background: var(--border-strong);
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-variation-settings: 'opsz' 144, 'SOFT' 60, 'wght' 500;
+    font-size: clamp(2.75rem, 1.5rem + 4vw, 4.75rem);
+    line-height: 0.98;
+    letter-spacing: -0.025em;
+    margin: 0 0 18px;
+    color: var(--text-strong);
+  }
+  h1 em {
+    font-style: italic;
+    font-variation-settings: 'opsz' 144, 'SOFT' 100, 'wght' 400;
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .lede {
+    font-family: 'Fraunces', Georgia, serif;
+    font-variation-settings: 'opsz' 14, 'SOFT' 40, 'wght' 400;
+    font-size: clamp(1rem, 0.9rem + 0.35vw, 1.2rem);
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 50ch;
+    margin: 0;
+    font-style: italic;
+  }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-variation-settings: 'opsz' 48, 'SOFT' 50, 'wght' 500;
+    font-size: 1.55rem;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    color: var(--text-strong);
+  }
+
+  .sub { color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+  .section-label {
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  /* ---------- Panels ---------- */
   .panel {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 16px;
+    border-radius: 14px;
+    padding: clamp(20px, 3vw, 32px);
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-soft);
   }
-  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-  input[type="text"], textarea {
+  .panel + .panel { margin-top: 0; }
+
+  label, .field-label {
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  /* ---------- Inputs ---------- */
+  input[type="text"], textarea, select {
     width: 100%;
-    background: var(--panel-2);
+    background: var(--bg);
     color: var(--text);
     border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px 12px;
-    font-family: inherit;
-    font-size: 14px;
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    transition: border-color .15s, background .15s;
   }
-  textarea { min-height: 160px; resize: vertical; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
-  input[type="file"] { color: var(--muted); font-size: 13px; }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    outline: 0; border-color: var(--accent); background: var(--panel-2);
+  }
+  textarea {
+    min-height: 180px; resize: vertical;
+    font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+
+  /* ---------- Buttons ---------- */
   button {
-    background: var(--green);
-    color: #000;
+    background: var(--accent);
+    color: var(--accent-ink);
     border: 0;
-    padding: 10px 20px;
+    padding: 11px 22px;
     border-radius: 999px;
-    font-weight: 700;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 13.5px;
+    letter-spacing: 0.01em;
+    font-family: 'Inter', sans-serif;
     cursor: pointer;
-    transition: transform .05s, background .15s;
+    transition: background .15s, transform .08s, box-shadow .15s;
   }
-  button:hover:not(:disabled) { background: var(--green-hover); transform: scale(1.02); }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button:hover:not(:disabled) { background: var(--accent-hover); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
   button.secondary {
     background: transparent;
     color: var(--text);
-    border: 1px solid var(--secondary-border);
+    border: 1px solid var(--border-strong);
   }
-  button.secondary:hover:not(:disabled) { border-color: var(--text); background: var(--panel-2); }
-  /* Uniform pill shape for all interactive buttons (excluding segmented + play) */
-  button, button.secondary { border-radius: 999px; padding: 10px 20px; font-size: 14px; }
-  /* File input styled like a pill button */
+  button.secondary:hover:not(:disabled) {
+    border-color: var(--accent); color: var(--accent); background: var(--accent-soft);
+  }
+  /* Brand button: Spotify green for the OAuth handoff specifically */
+  button.brand {
+    background: var(--green); color: #000; font-weight: 700;
+  }
+  button.brand:hover:not(:disabled) { background: var(--green-hover); }
+
+  /* File input restyled */
   input[type="file"] {
     background: transparent;
-    color: var(--text);
+    color: var(--muted);
     font-size: 13px;
-    border: 1px solid var(--secondary-border);
+    border: 1px dashed var(--border-strong);
     border-radius: 999px;
-    padding: 8px 14px;
+    padding: 6px 14px 6px 6px;
     cursor: pointer;
+    font-family: 'Inter', sans-serif;
   }
   input[type="file"]::file-selector-button {
-    background: var(--green); color: #000; border: 0;
-    border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px;
-    cursor: pointer; margin-right: 10px;
+    background: var(--accent); color: var(--accent-ink); border: 0;
+    border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 12.5px;
+    cursor: pointer; margin-right: 12px;
+    font-family: 'Inter', sans-serif;
   }
-  input[type="file"]::file-selector-button:hover { background: var(--green-hover); }
+  input[type="file"]::file-selector-button:hover { background: var(--accent-hover); }
+
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* ---------- Track row ---------- */
   .track {
-    display: flex; align-items: center; gap: 12px;
-    padding: 8px; border-radius: 6px;
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 12px; border-radius: 10px;
     border: 1px solid transparent;
+    transition: background .12s;
   }
   .track:hover { background: var(--panel-2); }
   .track.bad { border-color: var(--bad-border); background: var(--bad-bg); }
-  .track input[type="checkbox"] { width: 16px; height: 16px; }
-  .track img { width: 40px; height: 40px; border-radius: 4px; background: var(--img-bg); }
-  .track .meta { flex: 1; min-width: 0; }
-  .track .title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .track .artist { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .track .query { font-size: 11px; color: var(--query-color); font-family: ui-monospace, monospace; }
-  .track .status { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
-  .track select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-size: 12px; max-width: 320px; }
   .track.dup { border-color: var(--dup-border); background: var(--dup-bg); }
-  .play-btn { background: transparent; border: 1px solid var(--secondary-border); color: var(--text); border-radius: 999px; width: 28px; height: 28px; padding: 0; font-size: 12px; cursor: pointer; flex-shrink: 0; }
-  .play-btn:hover:not(:disabled) { background: var(--panel-2); transform: none; }
-  .play-btn:disabled { opacity: 0.3; }
-  select, .seg {
-    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
-    border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 14px;
+  .track input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    flex-shrink: 0;
   }
-  .seg { display: inline-flex; gap: 6px; padding: 4px; }
-  .seg button {
-    background: transparent; color: var(--muted); border: 0; padding: 6px 14px;
-    border-radius: 4px; font-weight: 600; font-size: 13px; cursor: pointer;
+  .track img { width: 44px; height: 44px; border-radius: 4px; background: var(--img-bg); object-fit: cover; flex-shrink: 0; }
+  .track .meta { flex: 1; min-width: 0; }
+  .track .title {
+    font-size: 14.5px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text-strong);
   }
-  .seg button.active { background: var(--green); color: #000; }
-  .seg button:hover:not(.active) { color: var(--text); transform: none; }
+  .track .artist { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track .query {
+    font-size: 11px; color: var(--query-color);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    margin-top: 2px;
+  }
+  .track .status {
+    font-size: 10px; padding: 3px 9px; border-radius: 999px;
+    font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .track select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 8px; font-size: 12px; max-width: 320px;
+    width: auto;
+  }
   .track .drag-handle {
-    cursor: grab; color: var(--muted); padding: 0 6px; font-size: 16px; user-select: none;
+    cursor: grab; color: var(--muted); padding: 0 4px;
+    font-size: 14px; user-select: none; line-height: 1;
   }
-  .track .drag-handle:hover { color: var(--text); }
+  .track .drag-handle:hover { color: var(--accent); }
   .track.dragging { opacity: 0.4; }
-  .track.drag-over { border-top: 2px solid var(--green); }
+  .track.drag-over { border-top: 2px solid var(--accent); }
   .status.ok { background: var(--status-ok-bg); color: var(--status-ok-color); }
   .status.miss { background: var(--status-miss-bg); color: var(--status-miss-color); }
-  details { margin-top: 12px; }
-  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
-  .log { background: var(--log-bg); padding: 10px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--log-color); max-height: 200px; overflow: auto; margin-top: 8px; }
-  /* Theme toggle */
-  .theme-toggle {
-    position: absolute; top: 24px; right: 24px;
-    background: transparent; border: 1px solid var(--secondary-border);
-    color: var(--text); border-radius: 999px;
-    width: 36px; height: 36px; padding: 0; font-size: 16px;
+
+  /* Play button (preview) */
+  .play-btn {
+    background: transparent; border: 1px solid var(--border-strong); color: var(--text);
+    border-radius: 999px; width: 30px; height: 30px; padding: 0;
+    font-size: 11px; cursor: pointer; flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
   }
-  .theme-toggle:hover { background: var(--panel-2); transform: none; }
-  /* Genre split modal */
+  .play-btn:hover:not(:disabled) {
+    background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+  }
+  .play-btn:disabled { opacity: 0.25; }
+
+  /* Segmented control */
+  .seg {
+    display: inline-flex; gap: 4px; padding: 4px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 999px;
+    width: auto;
+  }
+  .seg button {
+    background: transparent; color: var(--muted); border: 0; padding: 7px 18px;
+    border-radius: 999px; font-weight: 600; font-size: 13px;
+    cursor: pointer; transition: all .15s;
+  }
+  .seg button.active { background: var(--accent); color: var(--accent-ink); }
+  .seg button:hover:not(.active) { color: var(--text); }
+
+  /* Details disclosure */
+  details {
+    margin-top: 16px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  details:first-of-type { border-top: 0; padding-top: 0; margin-top: 12px; }
+  summary {
+    cursor: pointer; color: var(--text); font-size: 13px; font-weight: 500;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: '+'; color: var(--accent);
+    font-family: 'Fraunces', serif; font-size: 18px; line-height: 1;
+    width: 16px; display: inline-block;
+    transition: transform .2s;
+  }
+  details[open] summary::before { content: '−'; }
+
+  /* Debug log */
+  .log {
+    background: var(--log-bg); padding: 12px 14px; border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px;
+    color: var(--log-color); max-height: 200px; overflow: auto; margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  /* ---------- Theme toggle ---------- */
+  .theme-toggle {
+    position: fixed; top: 28px; right: 28px;
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); border-radius: 999px;
+    width: 40px; height: 40px; padding: 0; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 50;
+    box-shadow: var(--shadow-soft);
+    transition: all .2s;
+  }
+  .theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---------- Modal ---------- */
   .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px;
+    position: fixed; inset: 0; background: rgba(10, 8, 4, 0.7);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+    animation: fadein .2s ease;
   }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
   .modal {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px; max-width: 540px; width: 100%;
+    border-radius: 16px; padding: 32px;
+    max-width: 540px; width: 100%;
     max-height: 80vh; overflow-y: auto;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.5);
   }
   .genre-row {
-    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    display: flex; align-items: center; gap: 12px; padding: 12px 0;
     border-bottom: 1px solid var(--border);
   }
   .genre-row:last-child { border-bottom: 0; }
-  .genre-name { flex: 1; font-weight: 600; font-size: 14px; text-transform: capitalize; }
-  .genre-count { color: var(--muted); font-size: 12px; }
+  .genre-row input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+  .genre-name { flex: 1; font-weight: 500; font-size: 14.5px; text-transform: capitalize; color: var(--text-strong); }
+  .genre-count {
+    color: var(--muted); font-size: 11px; letter-spacing: 0.04em;
+    text-transform: uppercase; font-weight: 600;
+  }
+
+  /* ---------- Connected pill ---------- */
+  .connected-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 28px; padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .connected-bar .who {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13.5px; color: var(--muted);
+  }
+  .connected-bar .who strong {
+    color: var(--text-strong); font-weight: 600;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 999px;
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.18);
+  }
+
+  code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; color: var(--accent); }
+
+  .footer {
+    margin-top: 48px; padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 12px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  .footer em {
+    font-family: 'Fraunces', serif; font-style: italic;
+    font-variation-settings: 'opsz' 14, 'SOFT' 80;
+  }
+
   .hidden { display: none; }
-  a { color: var(--green); }
+
+  @media (max-width: 540px) {
+    .theme-toggle { top: 16px; right: 16px; }
+    .panel { padding: 20px; }
+    .masthead { margin-bottom: 36px; }
+  }
 </style>
 </head>
 <body>
 <button class="theme-toggle" id="themeToggle" title="Toggle theme">☀</button>
 <div class="container">
 
-  <h1>Spotify Playlist Builder</h1>
-  <div class="sub">Paste a song list or upload a CSV → search Spotify → create a playlist.</div>
+  <header class="masthead">
+    <div class="kicker">A Studio6 Networks tool</div>
+    <h1>Playlist <em>Studio</em></h1>
+    <p class="lede">Turn a list of song names into a Spotify playlist. Paste, match, refine, save — without leaving the page.</p>
+  </header>
 
   <div class="panel" id="setupPanel">
-    <p style="margin: 0 0 16px; line-height: 1.5;">Sign in with Spotify to start building playlists from song lists, CSVs, or existing playlist links.</p>
+    <h2>Get started</h2>
+    <p style="margin: 0 0 24px; color: var(--muted); max-width: 50ch;">Sign in with Spotify to start building playlists from song lists, CSVs, or existing playlist links. Your tokens never leave your browser.</p>
     <div>
-      <button id="loginBtn">Connect Spotify</button>
+      <button class="brand" id="loginBtn">Connect Spotify →</button>
     </div>
-    <details style="margin-top: 16px;">
-      <summary>Advanced: use your own Spotify app</summary>
-      <div style="color: var(--muted); font-size: 13px; margin-top: 8px; line-height: 1.6;">
-        By default this app uses the studio6networks Spotify integration. If you want to use your own (e.g. you're self-hosting):<br>
-        1. Go to <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a>, create an app.<br>
-        2. Set Redirect URI to <code id="redirectUri" style="background:var(--panel-2);padding:2px 6px;border-radius:3px;"></code>
-        <button class="secondary" style="padding:2px 8px;font-size:11px;margin-left:6px;" onclick="navigator.clipboard.writeText(document.getElementById('redirectUri').textContent)">copy</button><br>
+    <details style="margin-top: 28px;">
+      <summary>Advanced — use your own Spotify app</summary>
+      <div style="color: var(--muted); font-size: 13px; margin-top: 14px; line-height: 1.7;">
+        By default this app uses the Studio6 Networks Spotify integration. If you'd rather use your own (e.g. you're self-hosting):<br><br>
+        1. Visit <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a> and create an app.<br>
+        2. Set Redirect URI to <code id="redirectUri"></code>
+        <button class="secondary" style="padding:4px 10px;font-size:11px;margin-left:6px;" onclick="navigator.clipboard.writeText(document.getElementById('redirectUri').textContent)">copy</button><br>
         3. Paste your Client ID here, then connect:<br>
-        <input type="text" id="clientId" value="ca490bdd668d40b6819e5cf7098775f8" placeholder="Spotify app Client ID" style="margin-top: 8px;">
+        <input type="text" id="clientId" value="ca490bdd668d40b6819e5cf7098775f8" placeholder="Spotify app Client ID" style="margin-top: 12px;">
       </div>
     </details>
   </div>
 
   <div class="panel hidden" id="mainPanel">
-    <div class="row" style="justify-content: space-between; margin-bottom: 16px;">
-      <div>Connected as <strong id="userName">…</strong></div>
+    <div class="connected-bar">
+      <div class="who"><span class="dot"></span> Signed in as <strong id="userName">…</strong></div>
       <button class="secondary" id="logoutBtn">Disconnect</button>
     </div>
 
+    <h2 style="margin-bottom: 24px;">Build a playlist</h2>
+
     <label>Destination</label>
-    <div class="seg" id="modeSeg" style="margin-bottom: 12px;">
+    <div class="seg" id="modeSeg" style="margin-bottom: 20px;">
       <button data-mode="new" class="active">Create new</button>
       <button data-mode="existing">Add to existing</button>
     </div>
@@ -242,7 +501,11 @@
       <select id="existingPlaylist" style="width: 100%;"><option value="">Loading…</option></select>
     </div>
 
-    <label style="margin-top: 12px;">Songs (one per line — formats: "Artist - Title", "Title - Artist", or just "Title") <span style="color:var(--muted);font-weight:normal;">· Ctrl/⌘+Enter to search</span></label>
+    <label style="margin-top: 20px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+      <span>Songs</span>
+      <span style="text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 11px; color: var(--muted);">Ctrl / ⌘ + Enter to search</span>
+    </label>
+    <div class="sub" style="margin: -4px 0 8px;">One per line. Format: <code>Artist - Title</code>, <code>Title - Artist</code>, or just the title.</div>
     <textarea id="songsText" placeholder="Radiohead - Karma Police&#10;The Strokes - Last Nite&#10;Björk - Hyperballad"></textarea>
 
     <div class="row" style="margin-top: 12px;">
@@ -272,16 +535,16 @@
   </div>
 
   <div class="panel hidden" id="resultsPanel">
-    <div class="row" style="justify-content: space-between; margin-bottom: 12px;">
-      <strong>Review matches</strong>
-      <span class="sub" id="matchSummary"></span>
+    <div class="connected-bar" style="border-bottom: 0; padding-bottom: 0; margin-bottom: 20px;">
+      <h2 style="margin: 0;">Review matches</h2>
+      <span class="sub" id="matchSummary" style="font-size: 12px; letter-spacing: 0.04em;"></span>
     </div>
     <div id="results"></div>
-    <div class="row" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
-      <input type="text" id="addTrackInput" placeholder="Add a song — e.g. Radiohead - Karma Police" style="flex: 1; min-width: 200px;">
-      <button class="secondary" id="addTrackBtn" style="padding: 8px 16px;">Add</button>
+    <div class="row" style="margin-top: 16px; padding-top: 20px; border-top: 1px solid var(--border);">
+      <input type="text" id="addTrackInput" placeholder="Add another song — e.g. Radiohead - Karma Police" style="flex: 1; min-width: 200px;">
+      <button class="secondary" id="addTrackBtn">Add</button>
     </div>
-    <div class="row" style="margin-top: 16px;">
+    <div class="row" style="margin-top: 24px;">
       <button id="createBtn">Create playlist</button>
       <button class="secondary" id="splitGenreBtn">Split by genre</button>
       <button class="secondary" id="retryBtn">Retry misses</button>
@@ -289,12 +552,12 @@
       <button class="secondary" id="exportCsvBtn">Export CSV</button>
       <button class="secondary" id="backBtn">Back</button>
     </div>
-    <div class="sub" style="margin-top: 6px;">Tip: drag rows by the ⋮⋮ handle to reorder.</div>
+    <div class="sub" style="margin-top: 10px;">Drag the ⋮⋮ handle to reorder · click ▶ to preview · use the dropdown to swap matches.</div>
   </div>
 
   <div class="panel hidden" id="donePanel">
     <div id="doneMsg"></div>
-    <div style="margin-top: 12px;">
+    <div style="margin-top: 20px;">
       <button class="secondary" onclick="location.reload()">Start over</button>
     </div>
   </div>
@@ -303,6 +566,11 @@
     <summary>Debug log</summary>
     <div class="log" id="log"></div>
   </details>
+
+  <footer class="footer">
+    <div>A <em>Studio6 Networks</em> tool · <a href="https://github.com/studio6networks/playlist-builder" target="_blank">View on GitHub</a></div>
+    <div>Your Spotify tokens never leave your browser.</div>
+  </footer>
 
 </div>
 
