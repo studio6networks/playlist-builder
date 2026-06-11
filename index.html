@@ -254,13 +254,17 @@
     </div>
     <div class="sub" style="margin-top: 6px;">CSV: one song per row. If it has columns like <code>title,artist</code> or <code>artist,title</code> they'll be detected. Otherwise the first column is used.</div>
 
-    <details style="margin-top: 12px;">
-      <summary>Import from a Spotify playlist URL</summary>
+    <details style="margin-top: 12px;" open>
+      <summary>From an existing Spotify playlist link</summary>
       <div class="row" style="margin-top: 8px;">
         <input type="text" id="importUrl" placeholder="https://open.spotify.com/playlist/..." style="flex: 1; min-width: 200px;">
-        <button class="secondary" id="importBtn" style="padding: 8px 14px;">Import</button>
+        <button id="openBtn" style="padding: 8px 16px;">Open & edit</button>
+        <button class="secondary" id="importBtn" style="padding: 8px 14px;">Import as text</button>
       </div>
-      <div class="sub" style="margin-top: 6px;">Tracks from that playlist will be appended to the song list above.</div>
+      <div class="sub" style="margin-top: 6px;">
+        <strong>Open &amp; edit:</strong> loads the actual tracks straight into the editor — add or remove, then save as your own playlist. No re-searching, no missed matches.<br>
+        <strong>Import as text:</strong> appends the tracks to the list above as "Artist - Title" lines so they go through search again (useful for merging with manual entries).
+      </div>
     </details>
 
     <div class="row" style="margin-top: 16px;">
@@ -275,6 +279,10 @@
       <span class="sub" id="matchSummary"></span>
     </div>
     <div id="results"></div>
+    <div class="row" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+      <input type="text" id="addTrackInput" placeholder="Add a song — e.g. Radiohead - Karma Police" style="flex: 1; min-width: 200px;">
+      <button class="secondary" id="addTrackBtn" style="padding: 8px 16px;">Add</button>
+    </div>
     <div class="row" style="margin-top: 16px;">
       <button id="createBtn">Create playlist</button>
       <button class="secondary" id="splitGenreBtn">Split by genre</button>
@@ -839,6 +847,93 @@ function removeUnmatched() {
   renderResults();
 }
 
+// =================== OPEN PLAYLIST DIRECTLY ===================
+async function openPlaylistDirect() {
+  const url = document.getElementById('importUrl').value.trim();
+  const id = extractPlaylistId(url);
+  if (!id) { alert('Paste a Spotify playlist URL.'); return; }
+
+  const btn = document.getElementById('openBtn');
+  btn.disabled = true;
+  btn.textContent = 'Opening…';
+
+  try {
+    const meta = await api(`/playlists/${id}?fields=name,owner.display_name`);
+    const nameInput = document.getElementById('playlistName');
+    if (!nameInput.value.trim()) nameInput.value = `${meta.name} (my copy)`;
+
+    const allTracks = [];
+    let next = `/playlists/${id}/tracks?fields=items(track(id,uri,name,artists(id,name),album(images,name),preview_url,external_urls)),next&limit=100`;
+    while (next) {
+      const res = await api(next);
+      res.items.forEach(it => { if (it.track && it.track.id) allTracks.push(it.track); });
+      next = res.next ? res.next.replace('https://api.spotify.com/v1', '') : null;
+    }
+
+    if (!allTracks.length) { alert('Playlist has no tracks.'); return; }
+
+    matches = allTracks.map(t => ({
+      raw: `${t.artists.map(a => a.name).join(', ')} - ${t.name}`,
+      query: '',
+      parts: [],
+      track: t,
+      candidates: [t],
+      selected: true,
+    }));
+
+    renderResults();
+    document.getElementById('mainPanel').classList.add('hidden');
+    document.getElementById('resultsPanel').classList.remove('hidden');
+    document.getElementById('importUrl').value = '';
+    log(`Opened "${meta.name}" with ${allTracks.length} tracks for editing`);
+  } catch (e) {
+    alert('Could not open playlist: ' + e.message);
+    log('Open error:', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Open & edit';
+  }
+}
+
+// =================== ADD A TRACK INLINE ===================
+async function addTrackInline() {
+  const input = document.getElementById('addTrackInput');
+  const q = input.value.trim();
+  if (!q) return;
+
+  const btn = document.getElementById('addTrackBtn');
+  btn.disabled = true;
+  btn.textContent = 'Searching…';
+
+  try {
+    const res = await api('/search?q=' + encodeURIComponent(q) + '&type=track&limit=5');
+    const candidates = res.tracks.items || [];
+    const t = candidates[0];
+    if (!t) {
+      alert('No matches for: ' + q);
+      return;
+    }
+    matches.push({
+      raw: q,
+      query: q,
+      parts: [q],
+      track: t,
+      candidates,
+      selected: true,
+    });
+    input.value = '';
+    renderResults();
+    log(`Added "${t.artists[0].name} - ${t.name}"`);
+    input.focus();
+  } catch (e) {
+    alert('Search failed: ' + e.message);
+    log('Add-track error:', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Add';
+  }
+}
+
 // =================== RETRY MISSES ===================
 async function retryMisses() {
   const misses = matches.filter(m => !m.track);
@@ -1038,6 +1133,11 @@ document.getElementById('retryBtn').addEventListener('click', retryMisses);
 document.getElementById('removeMissesBtn').addEventListener('click', removeUnmatched);
 document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
 document.getElementById('importBtn').addEventListener('click', importFromPlaylist);
+document.getElementById('openBtn').addEventListener('click', openPlaylistDirect);
+document.getElementById('addTrackBtn').addEventListener('click', addTrackInline);
+document.getElementById('addTrackInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addTrackInline(); }
+});
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 document.getElementById('shareDraftBtn').addEventListener('click', shareDraft);
 document.getElementById('splitGenreBtn').addEventListener('click', splitByGenre);
