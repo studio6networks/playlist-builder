@@ -82,6 +82,21 @@
   .track .query { font-size: 11px; color: #666; font-family: ui-monospace, monospace; }
   .track .status { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
   .track select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-size: 12px; max-width: 320px; }
+  .track.dup { border-color: #5a4a1a; background: #2a2415; }
+  .play-btn { background: transparent; border: 1px solid #555; color: var(--text); border-radius: 999px; width: 28px; height: 28px; padding: 0; font-size: 12px; cursor: pointer; }
+  .play-btn:hover:not(:disabled) { background: var(--panel-2); transform: none; }
+  .play-btn:disabled { opacity: 0.3; }
+  select, .seg {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; font-family: inherit; font-size: 14px;
+  }
+  .seg { display: inline-flex; gap: 0; padding: 2px; }
+  .seg button {
+    background: transparent; color: var(--muted); border: 0; padding: 6px 14px;
+    border-radius: 4px; font-weight: 600; font-size: 13px; cursor: pointer;
+  }
+  .seg button.active { background: var(--green); color: #000; }
+  .seg button:hover:not(.active) { color: var(--text); transform: none; }
   .status.ok { background: #0f3d22; color: #4ade80; }
   .status.miss { background: #3d0f0f; color: #f87171; }
   details { margin-top: 12px; }
@@ -123,8 +138,21 @@
       <button class="secondary" id="logoutBtn">Disconnect</button>
     </div>
 
-    <label>Playlist name</label>
-    <input type="text" id="playlistName" placeholder="My new playlist">
+    <label>Destination</label>
+    <div class="seg" id="modeSeg" style="margin-bottom: 12px;">
+      <button data-mode="new" class="active">Create new</button>
+      <button data-mode="existing">Add to existing</button>
+    </div>
+
+    <div id="newPlaylistFields">
+      <label>Playlist name</label>
+      <input type="text" id="playlistName" placeholder="My new playlist">
+    </div>
+
+    <div id="existingPlaylistFields" class="hidden">
+      <label>Pick a playlist</label>
+      <select id="existingPlaylist" style="width: 100%;"><option value="">Loading…</option></select>
+    </div>
 
     <label style="margin-top: 12px;">Songs (one per line — formats: "Artist - Title", "Title - Artist", or just "Title")</label>
     <textarea id="songsText" placeholder="Radiohead - Karma Police&#10;The Strokes - Last Nite&#10;Björk - Hyperballad"></textarea>
@@ -134,6 +162,15 @@
       <input type="file" id="csvFile" accept=".csv,.txt">
     </div>
     <div class="sub" style="margin-top: 6px;">CSV: one song per row. If it has columns like <code>title,artist</code> or <code>artist,title</code> they'll be detected. Otherwise the first column is used.</div>
+
+    <details style="margin-top: 12px;">
+      <summary>Import from a Spotify playlist URL</summary>
+      <div class="row" style="margin-top: 8px;">
+        <input type="text" id="importUrl" placeholder="https://open.spotify.com/playlist/..." style="flex: 1; min-width: 200px;">
+        <button class="secondary" id="importBtn" style="padding: 8px 14px;">Import</button>
+      </div>
+      <div class="sub" style="margin-top: 6px;">Tracks from that playlist will be appended to the song list above.</div>
+    </details>
 
     <div style="margin-top: 16px;">
       <button id="searchBtn">Search tracks</button>
@@ -146,8 +183,9 @@
       <span class="sub" id="matchSummary"></span>
     </div>
     <div id="results"></div>
-    <div style="margin-top: 16px;">
+    <div class="row" style="margin-top: 16px;">
       <button id="createBtn">Create playlist</button>
+      <button class="secondary" id="retryBtn">Retry misses</button>
       <button class="secondary" id="backBtn">Back</button>
     </div>
   </div>
@@ -435,27 +473,56 @@ async function searchAll() {
   document.getElementById('searchBtn').textContent = 'Search tracks';
 }
 
+let currentAudio = null;
+function togglePreview(url, btn) {
+  if (currentAudio && currentAudio.src === url && !currentAudio.paused) {
+    currentAudio.pause();
+    return;
+  }
+  if (currentAudio) currentAudio.pause();
+  currentAudio = new Audio(url);
+  currentAudio.volume = 0.6;
+  currentAudio.play().catch(() => {});
+  document.querySelectorAll('.play-btn').forEach(b => b.textContent = '▶');
+  btn.textContent = '⏸';
+  currentAudio.addEventListener('ended', () => { btn.textContent = '▶'; });
+  currentAudio.addEventListener('pause', () => { btn.textContent = '▶'; });
+}
+
 function renderResults() {
   const found = matches.filter(m => m.track).length;
-  document.getElementById('matchSummary').textContent = `${found} of ${matches.length} matched`;
+  // Duplicate detection by track ID across selected matches
+  const idCounts = {};
+  matches.forEach(m => {
+    if (m.track && m.selected) idCounts[m.track.id] = (idCounts[m.track.id] || 0) + 1;
+  });
+  const dupCount = Object.values(idCounts).filter(c => c > 1).length;
+  const dupNote = dupCount ? ` · ${dupCount} duplicate${dupCount > 1 ? 's' : ''}` : '';
+  document.getElementById('matchSummary').textContent = `${found} of ${matches.length} matched${dupNote}`;
+
+  const missCount = matches.length - found;
+  document.getElementById('retryBtn').style.display = missCount ? '' : 'none';
 
   const container = document.getElementById('results');
   container.innerHTML = '';
   matches.forEach((m, i) => {
+    const isDup = m.track && idCounts[m.track.id] > 1;
     const div = document.createElement('div');
-    div.className = 'track' + (m.track ? '' : ' bad');
+    div.className = 'track' + (m.track ? (isDup ? ' dup' : '') : ' bad');
     const altOptions = (m.candidates || []).map((c, idx) =>
       `<option value="${idx}" ${c === m.track ? 'selected' : ''}>${escapeHtml(c.artists.map(a => a.name).join(', '))} — ${escapeHtml(c.name)}</option>`
     ).join('');
+    const preview = m.track?.preview_url;
     div.innerHTML = `
       <input type="checkbox" ${m.selected ? 'checked' : ''} ${m.track ? '' : 'disabled'} data-i="${i}">
       <img src="${m.track?.album?.images?.[2]?.url || ''}" onerror="this.style.visibility='hidden'">
       <div class="meta">
-        <div class="title">${m.track ? escapeHtml(m.track.name) : '— no match —'}</div>
+        <div class="title">${m.track ? escapeHtml(m.track.name) : '— no match —'}${isDup ? ' <span style="color:#d4a73a;font-size:11px;">(duplicate)</span>' : ''}</div>
         <div class="artist">${m.track ? escapeHtml(m.track.artists.map(a => a.name).join(', ')) : ''}</div>
         <div class="query">from: ${escapeHtml(m.raw)}</div>
         ${m.candidates && m.candidates.length > 1 ? `<select data-i="${i}" class="alt-pick" style="margin-top:4px;">${altOptions}</select>` : ''}
       </div>
+      <button class="play-btn" data-preview="${preview || ''}" ${preview ? '' : 'disabled'} title="${preview ? 'Play 30s preview' : 'No preview available'}">▶</button>
       <span class="status ${m.track ? 'ok' : 'miss'}">${m.track ? 'found' : 'miss'}</span>
     `;
     container.appendChild(div);
@@ -463,6 +530,7 @@ function renderResults() {
   container.querySelectorAll('input[type=checkbox]').forEach(cb => {
     cb.addEventListener('change', e => {
       matches[+e.target.dataset.i].selected = e.target.checked;
+      renderResults();
     });
   });
   container.querySelectorAll('select.alt-pick').forEach(sel => {
@@ -473,29 +541,66 @@ function renderResults() {
       renderResults();
     });
   });
+  container.querySelectorAll('.play-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const url = btn.dataset.preview;
+      if (url) togglePreview(url, btn);
+    });
+  });
 }
 
 function escapeHtml(s) {
   return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
 
-// =================== CREATE ===================
+// =================== CREATE / APPEND ===================
+let destinationMode = 'new';
+let userPlaylists = [];
+
+async function loadUserPlaylists() {
+  const sel = document.getElementById('existingPlaylist');
+  try {
+    const all = [];
+    let url = '/me/playlists?limit=50';
+    while (url) {
+      const res = await api(url);
+      all.push(...res.items.filter(p => p.owner.id === userId || p.collaborative));
+      url = res.next ? res.next.replace('https://api.spotify.com/v1', '') : null;
+    }
+    userPlaylists = all;
+    sel.innerHTML = all.length
+      ? all.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.tracks.total})</option>`).join('')
+      : '<option value="">No editable playlists found</option>';
+  } catch (e) {
+    sel.innerHTML = '<option value="">Failed to load</option>';
+    log('Load playlists failed:', e.message);
+  }
+}
+
 async function createPlaylist() {
-  const name = document.getElementById('playlistName').value.trim() || 'My Playlist';
   const selected = matches.filter(m => m.selected && m.track);
   if (!selected.length) { alert("No tracks selected."); return; }
 
-  document.getElementById('createBtn').disabled = true;
-  document.getElementById('createBtn').textContent = 'Creating…';
+  const btn = document.getElementById('createBtn');
+  btn.disabled = true;
+  btn.textContent = destinationMode === 'new' ? 'Creating…' : 'Adding…';
 
   try {
-    const playlist = await api(`/users/${userId}/playlists`, {
-      method: 'POST',
-      body: JSON.stringify({ name, public: false, description: 'Created with Playlist Builder' }),
-    });
-    log('Created playlist:', playlist.id);
+    let playlist;
+    if (destinationMode === 'new') {
+      const name = document.getElementById('playlistName').value.trim() || 'My Playlist';
+      playlist = await api(`/users/${userId}/playlists`, {
+        method: 'POST',
+        body: JSON.stringify({ name, public: false, description: 'Created with Playlist Builder' }),
+      });
+      log('Created playlist:', playlist.id);
+    } else {
+      const id = document.getElementById('existingPlaylist').value;
+      if (!id) { alert('Pick a playlist first.'); btn.disabled = false; btn.textContent = 'Add to playlist'; return; }
+      playlist = await api(`/playlists/${id}`);
+      log('Appending to playlist:', playlist.id);
+    }
 
-    // Add tracks in chunks of 100
     const uris = selected.map(m => m.track.uri);
     for (let i = 0; i < uris.length; i += 100) {
       const chunk = uris.slice(i, i + 100);
@@ -507,17 +612,93 @@ async function createPlaylist() {
 
     document.getElementById('resultsPanel').classList.add('hidden');
     document.getElementById('donePanel').classList.remove('hidden');
+    const verb = destinationMode === 'new' ? 'Playlist created' : 'Tracks added';
     document.getElementById('doneMsg').innerHTML = `
-      <strong>✓ Playlist created!</strong> Added ${selected.length} track${selected.length === 1 ? '' : 's'}.<br>
+      <strong>✓ ${verb}!</strong> ${destinationMode === 'new' ? 'Added' : 'Appended'} ${selected.length} track${selected.length === 1 ? '' : 's'}.<br>
       <a href="${playlist.external_urls.spotify}" target="_blank">Open in Spotify →</a>
     `;
+    if (currentAudio) currentAudio.pause();
   } catch (e) {
-    alert('Failed to create playlist: ' + e.message);
+    alert('Failed: ' + e.message);
     log('Error:', e.message);
   } finally {
-    document.getElementById('createBtn').disabled = false;
-    document.getElementById('createBtn').textContent = 'Create playlist';
+    btn.disabled = false;
+    btn.textContent = destinationMode === 'new' ? 'Create playlist' : 'Add to playlist';
   }
+}
+
+// =================== IMPORT FROM PLAYLIST URL ===================
+function extractPlaylistId(url) {
+  const m = url.match(/playlist\/([a-zA-Z0-9]+)/);
+  return m ? m[1] : null;
+}
+
+async function importFromPlaylist() {
+  const url = document.getElementById('importUrl').value.trim();
+  const id = extractPlaylistId(url);
+  if (!id) { alert('Paste a Spotify playlist URL.'); return; }
+
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+
+  try {
+    const lines = [];
+    let next = `/playlists/${id}/tracks?fields=items(track(name,artists(name))),next&limit=100`;
+    while (next) {
+      const res = await api(next);
+      res.items.forEach(it => {
+        if (it.track) lines.push(`${it.track.artists.map(a => a.name).join(', ')} - ${it.track.name}`);
+      });
+      next = res.next ? res.next.replace('https://api.spotify.com/v1', '') : null;
+    }
+    const ta = document.getElementById('songsText');
+    const existing = ta.value.trim();
+    ta.value = (existing ? existing + '\n' : '') + lines.join('\n');
+    localStorage.setItem('songs_draft', ta.value);
+    log(`Imported ${lines.length} tracks`);
+    document.getElementById('importUrl').value = '';
+  } catch (e) {
+    alert('Import failed: ' + e.message);
+    log('Import error:', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Import';
+  }
+}
+
+// =================== RETRY MISSES ===================
+async function retryMisses() {
+  const misses = matches.filter(m => !m.track);
+  if (!misses.length) return;
+
+  const btn = document.getElementById('retryBtn');
+  btn.disabled = true;
+  btn.textContent = 'Retrying…';
+
+  for (const m of misses) {
+    // Try title-only search (drop the artist hint if it was confusing the matcher)
+    const parts = m.parts || [m.raw];
+    const candidates = [m.raw, parts[parts.length - 1], parts[0]].filter((v, i, a) => v && a.indexOf(v) === i);
+    for (const q of candidates) {
+      try {
+        const res = await api('/search?q=' + encodeURIComponent(q) + '&type=track&limit=5');
+        if (res.tracks.items.length) {
+          m.candidates = res.tracks.items;
+          m.track = res.tracks.items[0];
+          m.selected = true;
+          log(`Retry "${m.raw}" with "${q}" → ${m.track.artists[0].name} - ${m.track.name}`);
+          break;
+        }
+      } catch (e) {
+        log(`Retry error: ${e.message}`);
+      }
+    }
+  }
+
+  renderResults();
+  btn.disabled = false;
+  btn.textContent = 'Retry misses';
 }
 
 // =================== EVENTS ===================
@@ -525,9 +706,23 @@ document.getElementById('loginBtn').addEventListener('click', startLogin);
 document.getElementById('logoutBtn').addEventListener('click', logout);
 document.getElementById('searchBtn').addEventListener('click', searchAll);
 document.getElementById('createBtn').addEventListener('click', createPlaylist);
+document.getElementById('retryBtn').addEventListener('click', retryMisses);
+document.getElementById('importBtn').addEventListener('click', importFromPlaylist);
 document.getElementById('backBtn').addEventListener('click', () => {
+  if (currentAudio) currentAudio.pause();
   document.getElementById('resultsPanel').classList.add('hidden');
   document.getElementById('mainPanel').classList.remove('hidden');
+});
+document.querySelectorAll('#modeSeg button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#modeSeg button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    destinationMode = b.dataset.mode;
+    document.getElementById('newPlaylistFields').classList.toggle('hidden', destinationMode !== 'new');
+    document.getElementById('existingPlaylistFields').classList.toggle('hidden', destinationMode !== 'existing');
+    document.getElementById('createBtn').textContent = destinationMode === 'new' ? 'Create playlist' : 'Add to playlist';
+    if (destinationMode === 'existing' && !userPlaylists.length) loadUserPlaylists();
+  });
 });
 document.getElementById('csvFile').addEventListener('change', async e => {
   const file = e.target.files[0];
