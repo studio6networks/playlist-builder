@@ -423,7 +423,6 @@
 
   <header class="masthead">
     <h1>Playlist <em>Studio</em></h1>
-    <p class="lede">Turn a list of song names into a Spotify playlist. Paste, match, refine, save — without leaving the page.</p>
   </header>
 
   <div class="panel" id="setupPanel">
@@ -476,27 +475,27 @@
     <div class="sub" style="margin: -4px 0 8px;">One per line. Format: <code>Artist - Title</code>, <code>Title - Artist</code>, or just the title.</div>
     <textarea id="songsText" placeholder="Radiohead - Karma Police&#10;The Strokes - Last Nite&#10;Björk - Hyperballad"></textarea>
 
-    <div class="row" style="margin-top: 12px;">
+    <div class="row" style="margin-top: 20px;">
       <label style="margin: 0;">…or upload CSV:</label>
       <input type="file" id="csvFile" accept=".csv,.txt">
       <button class="secondary" id="clearListBtn" style="padding: 6px 14px; font-size: 13px; margin-left: auto;">Clear list</button>
     </div>
-    <div class="sub" style="margin-top: 6px;">CSV: one song per row. If it has columns like <code>title,artist</code> or <code>artist,title</code> they'll be detected. Otherwise the first column is used.</div>
+    <div class="sub" style="margin-top: 10px;">CSV: one song per row. If it has columns like <code>title,artist</code> or <code>artist,title</code> they'll be detected. Otherwise the first column is used.</div>
 
-    <details style="margin-top: 12px;" open>
+    <details style="margin-top: 28px;" open>
       <summary>From an existing Spotify playlist link</summary>
-      <div class="row" style="margin-top: 8px;">
+      <div class="row" style="margin-top: 14px;">
         <input type="text" id="importUrl" placeholder="https://open.spotify.com/playlist/..." style="flex: 1; min-width: 200px;">
         <button id="openBtn" style="padding: 8px 16px;">Open & edit</button>
         <button class="secondary" id="importBtn" style="padding: 8px 14px;">Import as text</button>
       </div>
-      <div class="sub" style="margin-top: 6px;">
+      <div class="sub" style="margin-top: 10px; line-height: 1.7;">
         <strong>Open &amp; edit:</strong> loads the actual tracks straight into the editor — add or remove, then save as your own playlist. No re-searching, no missed matches.<br>
         <strong>Import as text:</strong> appends the tracks to the list above as "Artist - Title" lines so they go through search again (useful for merging with manual entries).
       </div>
     </details>
 
-    <div class="row" style="margin-top: 16px;">
+    <div class="row" style="margin-top: 32px; gap: 14px;">
       <button id="searchBtn">Search tracks</button>
       <button class="secondary" id="shareDraftBtn">Share draft link</button>
     </div>
