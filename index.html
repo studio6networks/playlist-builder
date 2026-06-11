@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Spotify Playlist Builder</title>
 <style>
-  :root {
+  :root, :root[data-theme="dark"] {
     --bg: #121212;
     --panel: #181818;
     --panel-2: #1f1f1f;
@@ -14,6 +14,43 @@
     --green-hover: #1ed760;
     --red: #e22134;
     --border: #2a2a2a;
+    --query-color: #666;
+    --img-bg: #333;
+    --secondary-border: #555;
+    --bad-border: #5a2a2a;
+    --bad-bg: #2a1515;
+    --dup-border: #5a4a1a;
+    --dup-bg: #2a2415;
+    --log-bg: #000;
+    --log-color: #aaa;
+    --status-ok-bg: #0f3d22;
+    --status-ok-color: #4ade80;
+    --status-miss-bg: #3d0f0f;
+    --status-miss-color: #f87171;
+  }
+  :root[data-theme="light"] {
+    --bg: #fafafa;
+    --panel: #ffffff;
+    --panel-2: #f4f4f4;
+    --text: #1a1a1a;
+    --muted: #5e5e5e;
+    --green: #1db954;
+    --green-hover: #169a45;
+    --red: #c02030;
+    --border: #e2e2e2;
+    --query-color: #888;
+    --img-bg: #e0e0e0;
+    --secondary-border: #c8c8c8;
+    --bad-border: #f0b8b8;
+    --bad-bg: #fff0f0;
+    --dup-border: #e8d68a;
+    --dup-bg: #fdf6dc;
+    --log-bg: #f0f0f0;
+    --log-color: #555;
+    --status-ok-bg: #d3f4e0;
+    --status-ok-color: #0e7a3b;
+    --status-miss-bg: #fbdcdc;
+    --status-miss-color: #b3252e;
   }
   * { box-sizing: border-box; }
   body {
@@ -23,6 +60,7 @@
     color: var(--text);
     min-height: 100vh;
     padding: 24px;
+    transition: background .2s, color .2s;
   }
   .container { max-width: 880px; margin: 0 auto; }
   h1 { margin: 0 0 4px; font-size: 28px; }
@@ -63,9 +101,27 @@
   button.secondary {
     background: transparent;
     color: var(--text);
-    border: 1px solid #555;
+    border: 1px solid var(--secondary-border);
   }
-  button.secondary:hover:not(:disabled) { border-color: var(--text); background: transparent; }
+  button.secondary:hover:not(:disabled) { border-color: var(--text); background: var(--panel-2); }
+  /* Uniform pill shape for all interactive buttons (excluding segmented + play) */
+  button, button.secondary { border-radius: 999px; padding: 10px 20px; font-size: 14px; }
+  /* File input styled like a pill button */
+  input[type="file"] {
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    border: 1px solid var(--secondary-border);
+    border-radius: 999px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  input[type="file"]::file-selector-button {
+    background: var(--green); color: #000; border: 0;
+    border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px;
+    cursor: pointer; margin-right: 10px;
+  }
+  input[type="file"]::file-selector-button:hover { background: var(--green-hover); }
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .track {
     display: flex; align-items: center; gap: 12px;
@@ -73,17 +129,17 @@
     border: 1px solid transparent;
   }
   .track:hover { background: var(--panel-2); }
-  .track.bad { border-color: #5a2a2a; background: #2a1515; }
+  .track.bad { border-color: var(--bad-border); background: var(--bad-bg); }
   .track input[type="checkbox"] { width: 16px; height: 16px; }
-  .track img { width: 40px; height: 40px; border-radius: 4px; background: #333; }
+  .track img { width: 40px; height: 40px; border-radius: 4px; background: var(--img-bg); }
   .track .meta { flex: 1; min-width: 0; }
   .track .title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .track .artist { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .track .query { font-size: 11px; color: #666; font-family: ui-monospace, monospace; }
+  .track .query { font-size: 11px; color: var(--query-color); font-family: ui-monospace, monospace; }
   .track .status { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
   .track select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-size: 12px; max-width: 320px; }
-  .track.dup { border-color: #5a4a1a; background: #2a2415; }
-  .play-btn { background: transparent; border: 1px solid #555; color: var(--text); border-radius: 999px; width: 28px; height: 28px; padding: 0; font-size: 12px; cursor: pointer; }
+  .track.dup { border-color: var(--dup-border); background: var(--dup-bg); }
+  .play-btn { background: transparent; border: 1px solid var(--secondary-border); color: var(--text); border-radius: 999px; width: 28px; height: 28px; padding: 0; font-size: 12px; cursor: pointer; flex-shrink: 0; }
   .play-btn:hover:not(:disabled) { background: var(--panel-2); transform: none; }
   .play-btn:disabled { opacity: 0.3; }
   select, .seg {
@@ -98,21 +154,49 @@
   .seg button.active { background: var(--green); color: #000; }
   .seg button:hover:not(.active) { color: var(--text); transform: none; }
   .track .drag-handle {
-    cursor: grab; color: #555; padding: 0 6px; font-size: 16px; user-select: none;
+    cursor: grab; color: var(--muted); padding: 0 6px; font-size: 16px; user-select: none;
   }
   .track .drag-handle:hover { color: var(--text); }
   .track.dragging { opacity: 0.4; }
   .track.drag-over { border-top: 2px solid var(--green); }
-  .status.ok { background: #0f3d22; color: #4ade80; }
-  .status.miss { background: #3d0f0f; color: #f87171; }
+  .status.ok { background: var(--status-ok-bg); color: var(--status-ok-color); }
+  .status.miss { background: var(--status-miss-bg); color: var(--status-miss-color); }
   details { margin-top: 12px; }
   summary { cursor: pointer; color: var(--muted); font-size: 13px; }
-  .log { background: #000; padding: 10px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 12px; color: #aaa; max-height: 200px; overflow: auto; margin-top: 8px; }
+  .log { background: var(--log-bg); padding: 10px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 12px; color: var(--log-color); max-height: 200px; overflow: auto; margin-top: 8px; }
+  /* Theme toggle */
+  .theme-toggle {
+    position: absolute; top: 24px; right: 24px;
+    background: transparent; border: 1px solid var(--secondary-border);
+    color: var(--text); border-radius: 999px;
+    width: 36px; height: 36px; padding: 0; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .theme-toggle:hover { background: var(--panel-2); transform: none; }
+  /* Genre split modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px;
+  }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; max-width: 540px; width: 100%;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .genre-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .genre-row:last-child { border-bottom: 0; }
+  .genre-name { flex: 1; font-weight: 600; font-size: 14px; text-transform: capitalize; }
+  .genre-count { color: var(--muted); font-size: 12px; }
   .hidden { display: none; }
   a { color: var(--green); }
 </style>
 </head>
 <body>
+<button class="theme-toggle" id="themeToggle" title="Toggle theme">☀</button>
 <div class="container">
 
   <h1>Spotify Playlist Builder</h1>
@@ -179,8 +263,9 @@
       <div class="sub" style="margin-top: 6px;">Tracks from that playlist will be appended to the song list above.</div>
     </details>
 
-    <div style="margin-top: 16px;">
+    <div class="row" style="margin-top: 16px;">
       <button id="searchBtn">Search tracks</button>
+      <button class="secondary" id="shareDraftBtn">Share draft link</button>
     </div>
   </div>
 
@@ -192,6 +277,7 @@
     <div id="results"></div>
     <div class="row" style="margin-top: 16px;">
       <button id="createBtn">Create playlist</button>
+      <button class="secondary" id="splitGenreBtn">Split by genre</button>
       <button class="secondary" id="retryBtn">Retry misses</button>
       <button class="secondary" id="removeMissesBtn">Remove unmatched</button>
       <button class="secondary" id="exportCsvBtn">Export CSV</button>
@@ -433,6 +519,7 @@ async function init() {
   if (draftSongs) document.getElementById('songsText').value = draftSongs;
   const draftName = localStorage.getItem('playlist_name_draft');
   if (draftName) document.getElementById('playlistName').value = draftName;
+  loadDraftFromUrl();
   document.getElementById('songsText').addEventListener('input', e => localStorage.setItem('songs_draft', e.target.value));
   document.getElementById('playlistName').addEventListener('input', e => localStorage.setItem('playlist_name_draft', e.target.value));
 
@@ -786,6 +873,162 @@ async function retryMisses() {
   btn.textContent = 'Retry misses';
 }
 
+// =================== THEME ===================
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeToggle').textContent = t === 'light' ? '🌙' : '☀';
+  localStorage.setItem('theme', t);
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+// Initialize theme from localStorage or system preference
+(function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved) { applyTheme(saved); return; }
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyTheme(prefersLight ? 'light' : 'dark');
+})();
+
+// =================== SHARE DRAFT ===================
+function shareDraft() {
+  const songs = document.getElementById('songsText').value.trim();
+  const name = document.getElementById('playlistName').value.trim();
+  if (!songs) { alert('Add some songs first.'); return; }
+  const payload = { s: songs, n: name };
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const url = `${window.location.origin}${window.location.pathname}#draft=${encoded}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('shareDraftBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Link copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+    log('Draft link copied to clipboard');
+  }).catch(() => {
+    prompt('Copy this link:', url);
+  });
+}
+
+function loadDraftFromUrl() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#draft=')) return false;
+  try {
+    const encoded = hash.slice(7);
+    const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    if (payload.s) document.getElementById('songsText').value = payload.s;
+    if (payload.n) document.getElementById('playlistName').value = payload.n;
+    if (payload.s) localStorage.setItem('songs_draft', payload.s);
+    if (payload.n) localStorage.setItem('playlist_name_draft', payload.n);
+    window.history.replaceState({}, '', window.location.pathname);
+    log('Loaded draft from shared link');
+    return true;
+  } catch (e) {
+    log('Could not parse draft link:', e.message);
+    return false;
+  }
+}
+
+// =================== GENRE SPLIT ===================
+async function splitByGenre() {
+  const selected = matches.filter(m => m.selected && m.track);
+  if (!selected.length) { alert('No tracks selected.'); return; }
+
+  const btn = document.getElementById('splitGenreBtn');
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+
+  try {
+    // Fetch artist genres for unique artists
+    const artistIds = [...new Set(selected.map(m => m.track.artists[0].id).filter(Boolean))];
+    const artistMap = {};
+    for (let i = 0; i < artistIds.length; i += 50) {
+      const chunk = artistIds.slice(i, i + 50);
+      const res = await api('/artists?ids=' + chunk.join(','));
+      res.artists.forEach(a => { artistMap[a.id] = a.genres || []; });
+    }
+
+    // Group tracks by primary genre
+    const groups = {};
+    selected.forEach(m => {
+      const genres = artistMap[m.track.artists[0].id] || [];
+      const key = genres[0] || 'unsorted';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(m);
+    });
+
+    const sortedGroups = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+    showGenreModal(sortedGroups);
+  } catch (e) {
+    alert('Genre lookup failed: ' + e.message);
+    log('Genre split error:', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Split by genre';
+  }
+}
+
+function showGenreModal(groups) {
+  const baseName = document.getElementById('playlistName').value.trim() || 'My Playlist';
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2 style="margin-top:0;">Split by genre</h2>
+      <div class="sub" style="margin-bottom: 12px;">Each checked group becomes its own playlist.</div>
+      <div id="genreList"></div>
+      <div class="row" style="margin-top: 16px; justify-content: flex-end;">
+        <button class="secondary" id="genreCancelBtn">Cancel</button>
+        <button id="genreCreateBtn">Create ${groups.length} playlist${groups.length === 1 ? '' : 's'}</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  const list = overlay.querySelector('#genreList');
+  groups.forEach(([genre, tracks], i) => {
+    const row = document.createElement('div');
+    row.className = 'genre-row';
+    row.innerHTML = `
+      <input type="checkbox" data-i="${i}" checked>
+      <div class="genre-name">${escapeHtml(genre)}</div>
+      <div class="genre-count">${tracks.length} track${tracks.length === 1 ? '' : 's'}</div>
+    `;
+    list.appendChild(row);
+  });
+  overlay.querySelector('#genreCancelBtn').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#genreCreateBtn').addEventListener('click', async () => {
+    const picks = [...overlay.querySelectorAll('input[type=checkbox]:checked')].map(cb => groups[+cb.dataset.i]);
+    overlay.querySelector('#genreCreateBtn').disabled = true;
+    overlay.querySelector('#genreCreateBtn').textContent = 'Creating…';
+    const links = [];
+    for (const [genre, tracks] of picks) {
+      try {
+        const niceGenre = genre.replace(/\b\w/g, c => c.toUpperCase());
+        const pl = await api(`/users/${userId}/playlists`, {
+          method: 'POST',
+          body: JSON.stringify({ name: `${baseName} — ${niceGenre}`, public: false, description: `Genre split: ${genre}` }),
+        });
+        const uris = tracks.map(t => t.track.uri);
+        for (let i = 0; i < uris.length; i += 100) {
+          await api(`/playlists/${pl.id}/tracks`, { method: 'POST', body: JSON.stringify({ uris: uris.slice(i, i + 100) }) });
+        }
+        links.push({ name: pl.name, url: pl.external_urls.spotify });
+        log(`Created "${pl.name}" with ${tracks.length} tracks`);
+      } catch (e) {
+        log(`Failed for genre ${genre}: ${e.message}`);
+      }
+    }
+    overlay.remove();
+    document.getElementById('resultsPanel').classList.add('hidden');
+    document.getElementById('donePanel').classList.remove('hidden');
+    document.getElementById('doneMsg').innerHTML = `
+      <strong>✓ Created ${links.length} playlist${links.length === 1 ? '' : 's'}!</strong><br><br>
+      ${links.map(l => `<a href="${l.url}" target="_blank">${escapeHtml(l.name)} →</a>`).join('<br>')}
+    `;
+    if (currentAudio) currentAudio.pause();
+  });
+}
+
 // =================== EVENTS ===================
 document.getElementById('loginBtn').addEventListener('click', startLogin);
 document.getElementById('logoutBtn').addEventListener('click', logout);
@@ -795,6 +1038,9 @@ document.getElementById('retryBtn').addEventListener('click', retryMisses);
 document.getElementById('removeMissesBtn').addEventListener('click', removeUnmatched);
 document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
 document.getElementById('importBtn').addEventListener('click', importFromPlaylist);
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+document.getElementById('shareDraftBtn').addEventListener('click', shareDraft);
+document.getElementById('splitGenreBtn').addEventListener('click', splitByGenre);
 document.getElementById('clearListBtn').addEventListener('click', () => {
   const ta = document.getElementById('songsText');
   if (!ta.value.trim() || confirm('Clear the song list?')) {
