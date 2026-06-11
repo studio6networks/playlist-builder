@@ -16,30 +16,29 @@
      - Two-tone palette: warm honey accent + Spotify green for brand handoff
      ============================================ */
   :root, :root[data-theme="dark"] {
-    --bg: #0e0c08;
-    --bg-grain: rgba(212, 168, 106, 0.05);
-    --panel: #16130d;
-    --panel-2: #1c1812;
-    --text: #f3ead9;
+    --bg: #0e0e0c;
+    --panel: #161614;
+    --panel-2: #1c1c1a;
+    --text: #ebe9e5;
     --text-strong: #ffffff;
-    --muted: #9a8e7a;
-    --accent: #d4a86a;
-    --accent-hover: #e6bc7d;
-    --accent-soft: rgba(212, 168, 106, 0.12);
-    --accent-ink: #1c1812;
+    --muted: #8e8d88;
+    --accent: #1db954;
+    --accent-hover: #1ed760;
+    --accent-soft: rgba(29, 185, 84, 0.12);
+    --accent-ink: #000000;
     --green: #1db954;
     --green-hover: #1ed760;
     --red: #d76060;
-    --border: #2a241c;
-    --border-strong: #3a3225;
-    --query-color: #6e6354;
-    --img-bg: #2a241c;
-    --bad-border: #5a3424;
-    --bad-bg: #2a1a14;
-    --dup-border: #5a4a1a;
-    --dup-bg: #2a2415;
-    --log-bg: #07060380;
-    --log-color: #8a7e6a;
+    --border: #262522;
+    --border-strong: #34332f;
+    --query-color: #62615d;
+    --img-bg: #262522;
+    --bad-border: #4a2a2a;
+    --bad-bg: #241616;
+    --dup-border: #4a4422;
+    --dup-bg: #232218;
+    --log-bg: rgba(0,0,0,0.4);
+    --log-color: #7e7d78;
     --status-ok-bg: rgba(29, 185, 84, 0.15);
     --status-ok-color: #6ed999;
     --status-miss-bg: rgba(215, 96, 96, 0.15);
@@ -47,35 +46,34 @@
     --shadow-soft: 0 1px 0 rgba(255,255,255,0.03) inset, 0 8px 24px -12px rgba(0,0,0,0.4);
   }
   :root[data-theme="light"] {
-    --bg: #f4ede0;
-    --bg-grain: rgba(168, 118, 63, 0.06);
-    --panel: #faf6ec;
-    --panel-2: #ebe2cf;
-    --text: #1a1612;
+    --bg: #f6f5f1;
+    --panel: #ffffff;
+    --panel-2: #efede7;
+    --text: #1a1a18;
     --text-strong: #000000;
-    --muted: #6f6453;
-    --accent: #a8763f;
-    --accent-hover: #8a5d2e;
-    --accent-soft: rgba(168, 118, 63, 0.1);
-    --accent-ink: #ffffff;
-    --green: #1aa84b;
-    --green-hover: #16903f;
+    --muted: #6c6b67;
+    --accent: #1db954;
+    --accent-hover: #169a44;
+    --accent-soft: rgba(29, 185, 84, 0.12);
+    --accent-ink: #000000;
+    --green: #1db954;
+    --green-hover: #169a44;
     --red: #b03a3a;
-    --border: #ddd1b8;
-    --border-strong: #c5b89c;
-    --query-color: #8a7d6a;
-    --img-bg: #e6dcc6;
-    --bad-border: #e8b8a8;
-    --bad-bg: #fbeae0;
+    --border: #e2e0d8;
+    --border-strong: #cac8be;
+    --query-color: #8a8884;
+    --img-bg: #e6e4dc;
+    --bad-border: #e8b8b8;
+    --bad-bg: #fbeaea;
     --dup-border: #e8d68a;
     --dup-bg: #fdf6dc;
-    --log-bg: rgba(0,0,0,0.05);
-    --log-color: #6e6353;
-    --status-ok-bg: rgba(26, 168, 75, 0.15);
+    --log-bg: rgba(0,0,0,0.04);
+    --log-color: #6e6c64;
+    --status-ok-bg: rgba(29, 185, 84, 0.14);
     --status-ok-color: #157a36;
     --status-miss-bg: rgba(176, 58, 58, 0.12);
     --status-miss-color: #963131;
-    --shadow-soft: 0 1px 0 rgba(255,255,255,0.6) inset, 0 4px 18px -10px rgba(75, 50, 20, 0.18);
+    --shadow-soft: 0 1px 0 rgba(255,255,255,0.6) inset, 0 4px 18px -10px rgba(0, 0, 0, 0.1);
   }
 
   * { box-sizing: border-box; }
@@ -91,10 +89,6 @@
     min-height: 100vh;
     padding: clamp(20px, 4vw, 56px) clamp(20px, 4vw, 40px) 80px;
     transition: background .25s ease, color .25s ease;
-    background-image:
-      radial-gradient(ellipse 60% 50% at 85% -10%, var(--accent-soft), transparent 70%),
-      radial-gradient(ellipse 50% 40% at 0% 100%, var(--accent-soft), transparent 60%);
-    background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -103,20 +97,6 @@
 
   /* ---------- Typography ---------- */
   .masthead { margin: 8px 0 56px; position: relative; }
-  .kicker {
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 500;
-    margin-bottom: 20px;
-    display: flex; align-items: center; gap: 12px;
-  }
-  .kicker::after {
-    content: '';
-    flex: 1; max-width: 80px;
-    height: 1px; background: var(--border-strong);
-  }
   h1 {
     font-family: 'Fraunces', Georgia, serif;
     font-variation-settings: 'opsz' 144, 'SOFT' 60, 'wght' 500;
@@ -428,17 +408,6 @@
 
   code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; color: var(--accent); }
 
-  .footer {
-    margin-top: 48px; padding-top: 24px;
-    border-top: 1px solid var(--border);
-    color: var(--muted); font-size: 12px;
-    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-  }
-  .footer em {
-    font-family: 'Fraunces', serif; font-style: italic;
-    font-variation-settings: 'opsz' 14, 'SOFT' 80;
-  }
-
   .hidden { display: none; }
 
   @media (max-width: 540px) {
@@ -453,7 +422,6 @@
 <div class="container">
 
   <header class="masthead">
-    <div class="kicker">A Studio6 Networks tool</div>
     <h1>Playlist <em>Studio</em></h1>
     <p class="lede">Turn a list of song names into a Spotify playlist. Paste, match, refine, save — without leaving the page.</p>
   </header>
@@ -567,10 +535,6 @@
     <div class="log" id="log"></div>
   </details>
 
-  <footer class="footer">
-    <div>A <em>Studio6 Networks</em> tool · <a href="https://github.com/studio6networks/playlist-builder" target="_blank">View on GitHub</a></div>
-    <div>Your Spotify tokens never leave your browser.</div>
-  </footer>
 
 </div>
 
